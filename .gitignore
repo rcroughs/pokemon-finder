@@ -34,3 +34,7 @@
 # Executables of the project
 img-dist
 img-search
+
+## LaTeX compilation files
+*.aux
+*.log
