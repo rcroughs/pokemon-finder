@@ -7,5 +7,5 @@ then
 elif [[ $1 = "-a" || $1 = "--automatic" ]]
 then
   # Mode automatique
-  ./list-file.sh $3 > ./img-search $2
+  ./list-file.sh $3 | ./img-search $2
 fi
