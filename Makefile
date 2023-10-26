@@ -1,11 +1,11 @@
-CC=gcc
-OPT=-Wall -Wextra -std=c11 -O2
+CC=g++
+OPT=-Wall -Wextra -O2
 OBJS=
 
 all: img-search
 
-img-search: main.c $(OBJS)
-	$(CC) $(OPT) $(OPT) main.c -o img-search $(OBJS)
+img-search: main.cpp $(OBJS)
+	$(CC) $(OPT) $(OPT) main.cpp -o img-search $(OBJS)
 
-%.o: %.c %.h
+%.o: %.cpp %.h
 	$(CC) $(OPT) $(DBG_OPT) -c $< -o $@
