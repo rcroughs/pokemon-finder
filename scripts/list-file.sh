@@ -12,6 +12,6 @@ then
   exit 2
 else
   # Execution classique
-  find $1 -type f -maxdepth 1
+  find $1 -maxdepth 1 -type f
   exit 0
 fi
