@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export PATH="$PATH:$PWD/img-dist/"
 if [[ $1 = "-i" || $1 = "--interactive" ]]
 then
   # Mode interactif
