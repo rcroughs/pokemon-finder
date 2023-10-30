@@ -64,7 +64,7 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int f1_vers_pere
         std::get<0>(closest) = current_dist; 
         std::get<1>(closest) = new_path;
       } else {
-        if (std::get<0>(closest) <= current_dist) {
+        if (std::get<0>(closest) >= current_dist) {
           std::get<0>(closest) = current_dist;
           std::get<1>(closest) = new_path;
         }
