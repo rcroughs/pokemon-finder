@@ -152,5 +152,7 @@ int main(int argc, char *argv[]) {
 // Dans son état actuel, img-search ne peut pas compiler correctement (et ne devrait pas par ailleurs) :
 // les signaux ne sont pas traités, ce qui entraine les exécutions fils à ne s'exéctuer qu'une seule fois.
 // Les boucles sont sont à rajouter. Je ne suis également pas certain que la ligne 20 
-// (exécution de la commande system avec comme programme list-file.sh) soit fonctionnelle ; laucher.sh devrait
-// normalement permettre l'utilisation de la commande list-file puisqu'il la place dans $PATH mais ceci est à revoir.
+// (exécution de la commande system avec comme programme img_dist) soit fonctionnelle ; laucher.sh devrait
+// normalement permettre l'utilisation de la commande img_dist puisqu'il la place dans $PATH mais ceci est à revoir.
+// De plus, il faut exécuter list-file.sh pour récupérer la liste des fichiers sur le stdin. La récupération est
+// déjà fonctionnelle (voir ligne 43), ne reste plus qu'à réfléchir à l'endroit ou exécuter list-file.
