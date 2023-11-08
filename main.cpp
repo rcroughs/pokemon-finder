@@ -36,6 +36,8 @@ void *create_shared_memory(size_t size) {
 
 void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab, pid_t father_pid) {
 
+  close(pere_vers_fils[WRITE]);
+
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
       perror("signal() ; Erreur lors du masquage de SIGINT");
@@ -113,6 +115,8 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   // Définition du handler pour SIGINT
   signal(SIGINT, handler_singint_father);
 
+  close(pere_vers_f1[READ]);
+  close(pere_vers_f2[READ]);
 
   char buffer[999];  // Buffer de taille 999 chars.
   int image_count = 0;
@@ -139,8 +143,6 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   // Fermeture des extremités des deux pipes
   close(pere_vers_f1[WRITE]);
   close(pere_vers_f2[WRITE]);
-  close(pere_vers_f1[READ]);
-  close(pere_vers_f2[READ]);
   // Attente de la terminaison des processus fils, permet de les effacer du PCB
   waitpid(distance_tab[2], nullptr, 0);
   waitpid(distance_tab[3], nullptr, 0);
