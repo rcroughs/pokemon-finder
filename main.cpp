@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
 
   if (argc != 2) {
     // Si l'exécution de img-search à un nombre de paramètres incorrect.
-    std::cerr << "Mauvaise utilisation : img_search prend 2 paramètres." << std::endl;
+    std::cerr << "Format Error : launcher [-i|--interactive|-a|--automatic] image [database_path]" << std::endl;
     return 1;
   }
 
