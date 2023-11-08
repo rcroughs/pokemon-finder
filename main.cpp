@@ -96,8 +96,6 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
           else if (ret_value == -3) {perror("img-dist ; process failed to finish correctly");}
           else {perror("img_dist ; Coudn't get distance between the two images.");} // Code > 65
       } else {
-          // Affichage des résultats de calcul (voir mail 1 novembre 2023)
-          std::cout << "Image traitée : " << arg2 << " | Résultat : " << ret_value << std::endl;
 
           if (ret_value < distance_tab[son_number] || distance_tab[son_number] == -10) {
               distance_tab[son_number] = ret_value;
@@ -108,7 +106,6 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
       // SIGURS1 est débloqué
       sigprocmask(SIG_UNBLOCK, &set, nullptr);
   }
-  std::cout << "Processus fils (de pid : " << distance_tab[2 + son_number] << ") s'est terminé" << std::endl;
 }
 
 void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_tab, char *path_tab) {
