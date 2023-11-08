@@ -1,13 +1,12 @@
 #include <string>
-#include <tuple>
 #include <iostream>
 #include <unistd.h>
 #include <sys/types.h>
 #include <cstdlib>
 #include <cstring>
-#include <csignal>
 #include <wait.h>
 #include <sys/mman.h>
+
 #define READ 0
 #define WRITE 1
 
@@ -17,14 +16,11 @@ void handler_singint_father(int n) {
     exit(1);
 }
 
+
 void handler_sigusr1_child(int n) {
     exit(1);
 }
 
-void handler_sigusr2_child(int n) {
-
-    exit(1);
-}
 
 void *create_shared_memory(size_t size) {
     // fonction prélevée du TP5 pour l'allocation de mémoire partagée
@@ -34,7 +30,7 @@ void *create_shared_memory(size_t size) {
 }
 
 
-void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab) {
+void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* distance_tab, char* path_tab, short int son_number) {
 
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
@@ -44,7 +40,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
   // définition du handler pour SIGUSR1
   if (signal(SIGUSR1, handler_sigusr1_child) == SIG_ERR) {
       perror("signal() ; Erreur lors du traitement du code de l'action (SUGINT)");
-   }
+  }
 
   // Ajout de SIGUSR1 au set de masquage
   sigset_t set;
@@ -99,7 +95,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
 
           if (ret_value < distance_tab[son_number] || distance_tab[son_number] == -10) {
               distance_tab[son_number] = ret_value;
-              strncpy(path_tab + son_number * 1000, arg2, 999);
+              strncpy(path_tab, arg2, 999);
           }
           // comparer la meilleure distance obtenue
       }
@@ -108,7 +104,8 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
   }
 }
 
-void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_tab, char *path_tab) {
+
+void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_tab, char *path_tab1, char* path_tab2) {
 
   // Définition du handler pour SIGINT
   signal(SIGINT, handler_singint_father);
@@ -151,17 +148,17 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   } else {
 
     int closest_distance;
-    int decalage; // Permet le déplacement dans le tableau de char
+    char* closest_path;
 
-    if (distance_tab[0] < distance_tab[1] || distance_tab[0] == distance_tab[1]) {closest_distance = distance_tab[0]; decalage = 0;}
-    else if (distance_tab[0] > distance_tab[1]) {closest_distance = distance_tab[1]; decalage = 1;}
-    std::cout << "Most similar image found: '" << path_tab + (decalage * 1000) << "' with a distance of " << closest_distance << "." << std::endl;
+    if (distance_tab[0] < distance_tab[1] || distance_tab[0] == distance_tab[1]) {closest_distance = distance_tab[0]; closest_path = path_tab1;}
+    else if (distance_tab[0] > distance_tab[1]) {closest_distance = distance_tab[1]; closest_path = path_tab2;}
+    std::cout << "Most similar image found: '" << closest_path << "' with a distance of " << closest_distance << "." << std::endl;
   }
   // On libère l'espace de mémoire partagée
-  munmap(distance_tab, sizeof(int)*4);
-  munmap(path_tab, sizeof(char)*999*2+2);
+  munmap(distance_tab, sizeof(int)*2);
+  munmap(path_tab1, sizeof(char)*999+1);
+  munmap(path_tab2, sizeof(char)*999+1);
 }
-
 
 
 int main(int argc, char *argv[]) {
@@ -186,17 +183,19 @@ int main(int argc, char *argv[]) {
   }
 
   // Initialisation de la mémoire partagée (path --> tableau de 999*2 char* (sans les \0) --> contient les deux chemins)
-  int* shared_memory_distance =  static_cast<int*>(create_shared_memory(sizeof(int) * 4));
-  char *shared_memory_path = static_cast<char *>(create_shared_memory(2 * sizeof(char) * 999 + 2));
+  int* shared_memory_distance =  static_cast<int*>(create_shared_memory(sizeof(int) * 2));
+  char *shared_memory_path1 = static_cast<char *>(create_shared_memory(sizeof(char) * 999 + 1));
+  char *shared_memory_path2 = static_cast<char *>(create_shared_memory(sizeof(char) * 999 + 1));
   // Initialisation des caractères séparateurs
-  shared_memory_path[999] = '\0';
-  shared_memory_path[2 * 999 + 1] = '\0';
+  shared_memory_path1[999] = '\0'; shared_memory_path2[999] = '\0';
 
-  if (shared_memory_distance == MAP_FAILED || shared_memory_path == MAP_FAILED) {
+  if (shared_memory_distance == MAP_FAILED || shared_memory_path1 == MAP_FAILED || shared_memory_path2 == MAP_FAILED) {
       perror("mmap() ; couldn't create shared memory");
       return 1;
   }
   shared_memory_distance[0] = -10; shared_memory_distance[1] = -10; // initialisation des valeurs par défaut
+
+  pid_t father_pid = getpid();
 
   pid_t child_pid = fork();  // On crée la main fork.
 
@@ -207,7 +206,7 @@ int main(int argc, char *argv[]) {
     close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
     close(pere_vers_fils2[WRITE]);
     shared_memory_distance[2] = getpid();
-    execution_enfant(image_to_find, pere_vers_fils1, 1, shared_memory_distance, shared_memory_path);
+    execution_enfant(image_to_find, pere_vers_fils1,shared_memory_distance, shared_memory_path1, 0);
 
 
   } else if (child_pid > 0) {
@@ -219,14 +218,13 @@ int main(int argc, char *argv[]) {
       close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
       close(pere_vers_fils2[WRITE]);
       shared_memory_distance[3] = getpid();
-      execution_enfant(image_to_find, pere_vers_fils2, 0, shared_memory_distance, shared_memory_path);
+      execution_enfant(image_to_find, pere_vers_fils2, shared_memory_distance, shared_memory_path2, 1);
       // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°2.
     } else {
       close(pere_vers_fils1[READ]); close(pere_vers_fils2[READ]);
-      execution_parent(pere_vers_fils1, pere_vers_fils2, shared_memory_distance, shared_memory_path);
+      // On lance l'exécution parent avec tout les pipes.
+      execution_parent(pere_vers_fils1, pere_vers_fils2, shared_memory_distance, shared_memory_path1, shared_memory_path2);
     }
-
-    // On lance l'exécution parent avec tout les pipes.
 
   } else {
     // Fork error (￣^￣)/
@@ -235,22 +233,3 @@ int main(int argc, char *argv[]) {
   }
   return 0;
 }
-
-
-// Pour le moment, img-search ne s'exécute pas de la meilleure des manières. J'ai rectifié ce qui tourne autour
-// des consignes pour la mémoire partagée + j'ai supprimé les pipes inutiles. Il y a quelques changements d'implémentation
-// à droite à gauche, mais sinon le code est essentiellement le même (si besoin d'explications, demandez moi :))
-//
-// J'ai rajouté la fonction du TP5 permettant de retourner un pointeur vers une mémoire partagée configurée
-//
-// Le fait de ne pas faire de sleep(1) après chaque write du processus père mène à des comportements innatendus
-// de la part de img-search. Je ne connais pas encore la raison étant donné que write() est un appel bloquant, mais il
-// va falloir comprendre pourquoi cela arrive.
-//
-// Pour ce qui est des erreurs dans les exécutions fils, voici les différents codes (vous êtes libre de changer ça) :
-//      -1 : le fork() a échoué
-//      -2 : execlp() chargé d'appeller img-dist a échoué
-//      -3 : erreur dans execlp()
-//
-// Dernier point : je n'ai pas encore géré SIGPIPE car je ne comprends pas la différence de son handler avec celui
-// de SIGINT, si quelqu'un a compris, merci de m'éclairer :)
