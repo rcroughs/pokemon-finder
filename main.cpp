@@ -34,9 +34,8 @@ void *create_shared_memory(size_t size) {
 }
 
 
-void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab, pid_t father_pid) {
+void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab) {
 
-  close(pere_vers_fils[WRITE]);
 
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
@@ -63,7 +62,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
   // On attend que le père envoie une image à comparer dans le pipe. ヽ(ー_ー )ノ
   while (read(pere_vers_fils[READ], buffer, sizeof(buffer))) {
 
-      kill(father_pid, SIGCONT);
+      kill(getppid(), SIGCONT);
       std::string current_img_path(buffer);
 
       // Bloquage du signal SIGUSR1 pendant la durée des calculs
@@ -100,6 +99,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
       } else {
 
           if (ret_value < distance_tab[son_number] || distance_tab[son_number] == -10) {
+              std::cout << ret_value << std::endl;
               distance_tab[son_number] = ret_value;
               strncpy(path_tab + son_number * 1000, arg2, 999);
           }
@@ -144,8 +144,9 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   close(pere_vers_f1[WRITE]);
   close(pere_vers_f2[WRITE]);
   // Attente de la terminaison des processus fils, permet de les effacer du PCB
-  waitpid(distance_tab[2], nullptr, 0);
-  waitpid(distance_tab[3], nullptr, 0);
+  wait(NULL);
+  wait(NULL);
+
 
   if (distance_tab[0] == -10 && distance_tab[1] == -10) {
     std::cout << "No similar image found (no comparison could be performed successfully)." << std::endl;
@@ -206,34 +207,25 @@ int main(int argc, char *argv[]) {
   if (child_pid == 0) {
 
     // Processus enfant (destiné a se dédoubler en 2 sous enfants).
-    pid_t sub_child_pid = fork();
     
-    if (sub_child_pid == 0) {
-      // sub-Processus Fils n°2
-      close(pere_vers_fils2[WRITE]); // fermeture de l'écriture
-      close(pere_vers_fils1[WRITE]);
-      shared_memory_distance[2] = getpid(); // Pour pouvoir accéder au pid du fils
-      execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path, father_pid);
-      // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°2.
+    close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
+    close(pere_vers_fils2[WRITE]);
+    execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path);
 
-    } else if (sub_child_pid > 0) {
-      // sub-Processus Fils n°1 ; (sub_child_pid renvoie le PID du processus Fils n°2).
-      close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
-      close(pere_vers_fils2[WRITE]);
-      shared_memory_distance[3] = getpid();
-      execution_enfant(image_to_find, pere_vers_fils1, 0, shared_memory_distance, shared_memory_path, father_pid);
-      // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°1.
-
-    } else {
-      perror("fork() error ; couldn't create sub-fork().");
-      return 1;
-    }
 
   } else if (child_pid > 0) {
     // Processus Parent ; (child_pid renvoie le PID de son processus fils).
     // fermeture des extrémités non utilisées des pipes --> le père accède en lecture
-    close(pere_vers_fils1[READ]); close(pere_vers_fils2[READ]);
-    execution_parent(pere_vers_fils1, pere_vers_fils2, shared_memory_distance, shared_memory_path);
+    pid_t second_child = fork ();
+
+    if (second_child == 0) {
+      execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path);
+      // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°2.
+    } else {
+      close(pere_vers_fils1[READ]); close(pere_vers_fils2[READ]);
+      execution_parent(pere_vers_fils1, pere_vers_fils2, shared_memory_distance, shared_memory_path);
+    }
+
     // On lance l'exécution parent avec tout les pipes.
 
   } else {
