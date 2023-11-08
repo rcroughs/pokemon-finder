@@ -1,18 +1,51 @@
-\documentclass{article}
+\documentclass[french]{article}
 
 \usepackage[a4paper, total={6in, 8in}]{geometry}
-\usepackage[francais]{babel}
+\usepackage{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 
 % Titres
 % TODO: Ajouter les matricules
 \title{Quel est ce Pokemon ? \\ Rapport}
 \date{Année 2023-24}
-\author{Antoine BERTHION \texttt{(matricule)} \and Romain CROUGHS \texttt{(000572261)} \and Lucas VAN PRAAG \texttt{(matricule)}}
+\author{Antoine BERTHION \texttt{(000566199)} \and Romain CROUGHS \texttt{(000572261)} \and Lucas VAN PRAAG \texttt{(000569535)}}
 
 \begin{document}
 \maketitle
 
 \section{Introduction}
-% TODO: Ecrire le texte ici
+Dans ce projet, nous devions faire de la recherche concurrente d'images à partir d'une image passée en paramètre, qui sera comparée avec
+des images qui seront passées dans l'entrée standard. L'enjeu principal du projet est donc de créer deux processus, qui peuvent communiquer
+avec le processus père afin d'effectuer la tâche précédemment énoncée.
 
+Mais alors comment faire gérer et faire communiquer ces processus ?
+
+Les systèmes d'exploitation modernes nous offrent beaucoup de méthodes pour coordonner nos processus. Dans ce rapport, nous décrirons comment
+nous avons imaginé les processus et les protocoles de communication entre les processus. Enfin, nous parlerons des scripts bash qui sont utiles
+au bon fonctionnement de notre programme.
+
+\section{Programme \texttt{img-search}}
+Ce programme est le coeur du projet. Il permet de récupérer les images à comparer, créer les processus fils qui vont effectuer la recherche concurrente
+et enfin de récupérer les résultats des processus fils. 
+
+\subsection{Récupération des paramètres}
+\noindent Nous avons deux types de paramètres différents a récupérer:
+
+\begin{itemize}
+  \item Image que l'on souhaite comparer avec la banque d'images qui est passé en argument du programme. 
+  \item Banque d'image qui est passée dans l'entrée standard.
+\end{itemize}
+
+Premièrement, récupérer l'image passée dans les paramètres est une tâche basique, car elle se trouve dans notre argument \texttt{argv[]} 
+à l'index 1 (l'index 0 étant le nom de notre application).
+
+Deuxièmement, pour récupérer l'entrée standard, nous pouvons utiliser l'appel systeme \texttt{int fgets(char buf, int buf\_size, stdin)} qui va lire
+l'entrée standard ligne par ligne et mettre le contenu dans notre buffer et retouner \texttt{1}. Dans le cas où nous tombons sur un \texttt{EOF}, il renvoie 
+simplement 0. Pour récupérer toutes les lignes de notre entrée standard, nous pouvons mettre cette fonction dans une boucle \texttt{while} et, par effet de bord,
+la boucle va se bloquer quand le fichier sera terminé. 
+
+\subsection{Création des processus enfant}
+Pour gérer la recherche concurrente des images, nous devons créer deux processus qui vont effectuer la même chose, mais sur des images différentes qui lui seront
+envoyées par le processus père.
 \end{document}
