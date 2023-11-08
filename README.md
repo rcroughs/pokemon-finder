@@ -3,7 +3,7 @@ Programme qui permet de reconnaitre une image de pokemon.
 
 ## Etapes de projet
  - [x] *list-file*: Script en bash qui liste les fichiers d'un dossiers.
- - [ ] *img-search*: Programme en C++ qui prend une image en entrée et qui renvoie l'image la plus proche d'une base donnée.
+ - [x] *img-search*: Programme en C++ qui prend une image en entrée et qui renvoie l'image la plus proche d'une base donnée.
  - [x] *launcher*: Script bash qui permet de lancer le programme.
 
 ## Fichiers
