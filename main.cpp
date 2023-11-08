@@ -36,7 +36,6 @@ void *create_shared_memory(size_t size) {
 
 void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab) {
 
-
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
       perror("signal() ; Erreur lors du masquage de SIGINT");
@@ -99,7 +98,6 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
       } else {
 
           if (ret_value < distance_tab[son_number] || distance_tab[son_number] == -10) {
-              std::cout << ret_value << std::endl;
               distance_tab[son_number] = ret_value;
               strncpy(path_tab + son_number * 1000, arg2, 999);
           }
@@ -210,7 +208,8 @@ int main(int argc, char *argv[]) {
     
     close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
     close(pere_vers_fils2[WRITE]);
-    execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path);
+    shared_memory_distance[2] = getpid();
+    execution_enfant(image_to_find, pere_vers_fils1, 1, shared_memory_distance, shared_memory_path);
 
 
   } else if (child_pid > 0) {
@@ -219,7 +218,10 @@ int main(int argc, char *argv[]) {
     pid_t second_child = fork ();
 
     if (second_child == 0) {
-      execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path);
+      close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
+      close(pere_vers_fils2[WRITE]);
+      shared_memory_distance[3] = getpid();
+      execution_enfant(image_to_find, pere_vers_fils2, 0, shared_memory_distance, shared_memory_path);
       // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°2.
     } else {
       close(pere_vers_fils1[READ]); close(pere_vers_fils2[READ]);
