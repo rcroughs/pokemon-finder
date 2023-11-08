@@ -198,8 +198,6 @@ int main(int argc, char *argv[]) {
   }
   shared_memory_distance[0] = -10; shared_memory_distance[1] = -10; // initialisation des valeurs par défaut
 
-  pid_t father_pid = getpid();
-
   pid_t child_pid = fork();  // On crée la main fork.
 
   if (child_pid == 0) {
