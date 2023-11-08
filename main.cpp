@@ -21,6 +21,11 @@ void handler_sigusr1_child(int n) {
     exit(1);
 }
 
+void handler_sigusr2_child(int n) {
+
+    exit(1);
+}
+
 void *create_shared_memory(size_t size) {
     // fonction prélevée du TP5 pour l'allocation de mémoire partagée
     const int protection = PROT_READ | PROT_WRITE;
@@ -29,7 +34,7 @@ void *create_shared_memory(size_t size) {
 }
 
 
-void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab) {
+void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short int son_number, int* distance_tab, char* path_tab, pid_t father_pid) {
 
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
@@ -56,6 +61,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
   // On attend que le père envoie une image à comparer dans le pipe. ヽ(ー_ー )ノ
   while (read(pere_vers_fils[READ], buffer, sizeof(buffer))) {
 
+      kill(father_pid, SIGCONT);
       std::string current_img_path(buffer);
 
       // Bloquage du signal SIGUSR1 pendant la durée des calculs
@@ -102,13 +108,14 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], short i
       // SIGURS1 est débloqué
       sigprocmask(SIG_UNBLOCK, &set, nullptr);
   }
-    close(pere_vers_fils[READ]);
+  std::cout << "Processus fils (de pid : " << distance_tab[2 + son_number] << ") s'est terminé" << std::endl;
 }
 
 void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_tab, char *path_tab) {
 
   // Définition du handler pour SIGINT
   signal(SIGINT, handler_singint_father);
+
 
   char buffer[999];  // Buffer de taille 999 chars.
   int image_count = 0;
@@ -123,18 +130,23 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
     if (image_count % 2 == 0) {
       // Images avec ID pair sont traitées par Fils1
       write(pere_vers_f1[WRITE], new_path.c_str(), new_path.size() + 1);
-      //sleep(1);
+      kill(getpid(), SIGSTOP);
     } else {
       // Images avec ID impair sont traitées par Fils2
       write(pere_vers_f2[WRITE], new_path.c_str(), new_path.size() + 1);
-      //sleep(1);
+      kill(getpid(), SIGSTOP);
     }
     image_count++;
   }
+
+  // Fermeture des extremités des deux pipes
   close(pere_vers_f1[WRITE]);
   close(pere_vers_f2[WRITE]);
-
-  // Ici, attendre l'arrêt des deux processus fils ?
+  close(pere_vers_f1[READ]);
+  close(pere_vers_f2[READ]);
+  // Attente de la terminaison des processus fils, permet de les effacer du PCB
+  waitpid(distance_tab[2], nullptr, 0);
+  waitpid(distance_tab[3], nullptr, 0);
 
   if (distance_tab[0] == -10 && distance_tab[1] == -10) {
     std::cout << "No similar image found (no comparison could be performed successfully)." << std::endl;
@@ -148,7 +160,7 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
     std::cout << "Most similar image found: '" << path_tab + (decalage * 1000) << "' with a distance of " << closest_distance << "." << std::endl;
   }
   // On libère l'espace de mémoire partagée
-  munmap(distance_tab, sizeof(int)*4);
+  munmap(distance_tab, sizeof(int)*5);
   munmap(path_tab, sizeof(char)*999*2+2);
 }
 
@@ -188,6 +200,7 @@ int main(int argc, char *argv[]) {
   }
   shared_memory_distance[0] = -10; shared_memory_distance[1] = -10; // initialisation des valeurs par défaut
 
+  pid_t father_pid = getpid();
 
   pid_t child_pid = fork();  // On crée la main fork.
 
@@ -199,15 +212,17 @@ int main(int argc, char *argv[]) {
     if (sub_child_pid == 0) {
       // sub-Processus Fils n°2
       close(pere_vers_fils2[WRITE]); // fermeture de l'écriture
+      close(pere_vers_fils1[WRITE]);
       shared_memory_distance[2] = getpid(); // Pour pouvoir accéder au pid du fils
-      execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path);
+      execution_enfant(image_to_find, pere_vers_fils2, 1, shared_memory_distance, shared_memory_path, father_pid);
       // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°2.
 
     } else if (sub_child_pid > 0) {
       // sub-Processus Fils n°1 ; (sub_child_pid renvoie le PID du processus Fils n°2).
       close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
+      close(pere_vers_fils2[WRITE]);
       shared_memory_distance[3] = getpid();
-      execution_enfant(image_to_find, pere_vers_fils1, 0, shared_memory_distance, shared_memory_path);
+      execution_enfant(image_to_find, pere_vers_fils1, 0, shared_memory_distance, shared_memory_path, father_pid);
       // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°1.
 
     } else {
