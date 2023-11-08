@@ -160,7 +160,7 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
     std::cout << "Most similar image found: '" << path_tab + (decalage * 1000) << "' with a distance of " << closest_distance << "." << std::endl;
   }
   // On libère l'espace de mémoire partagée
-  munmap(distance_tab, sizeof(int)*5);
+  munmap(distance_tab, sizeof(int)*4);
   munmap(path_tab, sizeof(char)*999*2+2);
 }
 
