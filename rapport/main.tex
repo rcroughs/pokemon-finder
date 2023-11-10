@@ -33,19 +33,74 @@ et enfin de récupérer les résultats des processus fils.
 \noindent Nous avons deux types de paramètres différents a récupérer:
 
 \begin{itemize}
-  \item Image que l'on souhaite comparer avec la banque d'images qui est passé en argument du programme. 
-  \item Banque d'image qui est passée dans l'entrée standard.
+  \item Image que l'on souhaite comparer avec la banque d'images qui est passée en argument du programme. 
+  \item Banque d'images qui est passée dans l'entrée standard.
 \end{itemize}
 
 Premièrement, récupérer l'image passée dans les paramètres est une tâche basique, car elle se trouve dans notre argument \texttt{argv[]} 
 à l'index 1 (l'index 0 étant le nom de notre application).
 
 Deuxièmement, pour récupérer l'entrée standard, nous pouvons utiliser l'appel systeme \texttt{int fgets(char buf, int buf\_size, stdin)} qui va lire
-l'entrée standard ligne par ligne et mettre le contenu dans notre buffer et retouner \texttt{1}. Dans le cas où nous tombons sur un \texttt{EOF}, il renvoie 
+l'entrée standard ligne par ligne et mettre le contenu dans notre buffer et retourner \texttt{1}. Dans le cas où nous tombons sur un \texttt{EOF}, il renvoie 
 simplement 0. Pour récupérer toutes les lignes de notre entrée standard, nous pouvons mettre cette fonction dans une boucle \texttt{while} et, par effet de bord,
 la boucle va se bloquer quand le fichier sera terminé. 
 
 \subsection{Création des processus enfant}
-Pour gérer la recherche concurrente des images, nous devons créer deux processus qui vont effectuer la même chose, mais sur des images différentes qui lui seront
-envoyées par le processus père.
+Pour gérer la recherche concurrente des images, nous devons créer deux processus qui vont avoir un fonctionnement similaire, mais va rechercher des images différentes
+qui lui seront envoyées par le processus père via un pipe anonyme.
+
+\subsection{Fonctionnement du père}
+Notre processus père a une responsabilité: transmettre les paramètres entrés par l'utilisateur à ses deux enfants. Pour avoir une charge de travail équitable sur les 
+deux processus enfants, nous tenons un compteur de combien d'images ont été entrées dans l'entrée standard. Si ce compteur est pair, il envoie l'image dans le pipe 
+du premier enfant, dans le cas inverse, il l'envoie à l'autre enfant. 
+
+Cependant, lors de l'écriture dans les pipes, nous avons fait face à la problématique suivante. La comparaison de distance entre deux images est un processus long. Au 
+contraire, récupérer les images dans l'entrée standard ne l'est pas. Cela ne pose pas de problèmes quand nous utilisons une entrée standard qui est reliée au clavier 
+de l'utilisateur, mais quand nous faisons un pipe entre nos processus (avec l'opérateur \texttt{|} en bash) le processus père écrit plus vite 
+que le processus enfant ne peut le lire. Pour remédier à cela, nous avons opté pour une solution en signaux. Lorsque le père a écrit dans les deux pipes, au début 
+de son exécution, il se met en pause avec un signal \texttt{SIGSTOP} qu'il s'envoie à lui même. Une fois qu'un des processus fils a fini son calcul il débloque 
+l'exécution du père avec le signal \texttt{SIGCONT}. Cela permet aux pipes de ne jamais être surchargés. 
+
+\subsection{Fonctionnement des processus enfants}
+Le processus enfant va tout d'abord lire ce qu'il y a dans son pipe. Vu que le read est bloquant, nous n'avons qu'à attendre que le père écrive quelque chose pour 
+commencer l'exécution. Une fois qu'une image est recue, nous allons créer un nouveau processus et modifier son fil d'exécution avec l'appel système \texttt{execlp} 
+car nous avons veillé a ce que notre programme \texttt{img-dist} soit dans les variables \texttt{PATH} lors de l'execution de notre programme. Nous pouvons alors 
+attendre qu'il se finisse avec la fonction \texttt{wait()} pour récupérer sa valeur de retour (qui est la distance entre l'image que l'on recherche et l'image 
+de la banque d'image). Finalement, nous pouvons stocker ce résultat dans la mémoire partagée qui sera détaillé dans le chapitre suivant. 
+
+\subsection{Stockage des resultats dans la mémoire partagée}
+Pour stocker tous les résultats qui ont été calculés, nous pouvons les mettre dans un tableau dans la mémoire partagée. Cependant, nous devons veiller aux problèmes 
+de concurrence, car nous ne savons pas quand les données vont être écrites par les deux processus fils. Pour éviter tous ces problèmes de concurrence, nous avons décidé
+d'assigner deux places complètement différentes dans la mémoire, afin d'éviter tous les problèmes qui pourraient être causés par la concurrence des recherches. En pratique,
+un enfant écrit et lit uniquement sa partie de la liste partagée et l'autre ne lit et écrit uniquement dans l'autre partie. Nous avons alors un tableau d'entier qui est 
+de taille 2, et deux tableaux de caractère. Le tableau d'entier contiendra la distance la plus petite trouvée par chaque processus, et les tableaux de caractère le chemin 
+correspondant à cette valeur. Une fois que toutes les recherches sont terminées, le processus père va comparer les deux éléments de la liste d'entiers, et le plus petite 
+valeur sera le resultat de retour. La valeur par défaut de cette liste d'entier est -10, ce qui permet de savoir si aucune image n'a été entrée.  
+
+\section{Script bash \texttt{list-file}}
+Le fonctionnement de ce programme est assez simple car il repose sur une fonction déjà existante en bash, le programme \texttt{find}. Nous allons lui ajouter les paramètres 
+\texttt{-maxdepth 1} afin qu'on ne cherche pas les images dans les sous-fichiers qui peuvent se trouver dans le fichier de recherche. Egalement, nous allons inclure 
+le paramètre \texttt{-type f} qui signifie que nous ne voulons que afficher les fichiers et non les dossiers. Enfin, le paramètre \texttt{-name ".*"} afin de ne pas 
+inclure les fichiers masqués (ce paramètre n'est pas vraiment obligatoire mais il permet de rendre le programme plus robuste). Nous avons également veillé à 
+informer l'utilisateur s'il manque un paramètre dans son appel au script. 
+
+\section{Scipt bash \texttt{launcher}}
+Finalement, nous devions créer une script qui permette de lancer notre programme. Nous avions donc deux modes à gérer, comme il est décrit dans l'énoncé. 
+
+Premièrement, nous avons du modifier la variable \texttt{PATH}. Pour ce faire, nous devons comprendre comment fonctionne cette variable. Cette variable contient des 
+adresses de fichiers contenant des programmes qui sont séparés par des :. Si nous voulons ajouter notre programme, il nous suffit d'ajouter notre chemin à cette 
+variable, nous avons alors la commande \texttt{PATH="$PATH:$PWD/img-dist/"}. Nous incluons \texttt{PWD} car nous voulons le chemin absolu de notre pogramme. 
+
+Pour gérer le mode interactif, c'est le plus simple, car nous appelons juste notre programme avec le fichier à rechercher en argument, et nous laissons l'utilisateur 
+rentrer les chemins qu'il souhaite dans l'entrée standard. D'ailleurs, le calcul se fera dès qu'il passe une ligne, ce qui signifie que dès qu'il fera Ctrl+D, 
+il aura le resultat. 
+
+En ce concerne le mode automatique, nous allons utiliser notre script \texttt{list-file} et rediriger la sortie de ce script vers l'entrée 
+de notre programme \texttt{img-search}, avec l'opérateur \texttt{|}. 
+
+\section{Conclusion}
+Pour conclure, nous avons pu, à travers ce projet, comprendre toutes les méthodes de communication entre processus. Entre les pipes utilisés pour communiquer du 
+père vers les enfants, de la mémoire partagée pour enregistrer les résultats ou encore les signaux pour synchroniser les processus. Nous avons également pu 
+aborder les possibles problèmes de concurrence dans la mémoire partagée.
+
 \end{document}
