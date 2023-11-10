@@ -79,13 +79,13 @@ valeur sera le resultat de retour. La valeur par défaut de cette liste d'entier
 
 \section{Script bash \texttt{list-file}}
 Le fonctionnement de ce programme est assez simple car il repose sur une fonction déjà existante en bash, le programme \texttt{find}. Nous allons lui ajouter les paramètres 
-\texttt{-maxdepth 1} afin qu'on ne cherche pas les images dans les sous-fichiers qui peuvent se trouver dans le fichier de recherche. Egalement, nous allons inclure 
+\texttt{-maxdepth 1} afin qu'on ne cherche pas les images dans les sous-dossiers qui peuvent se trouver dans le dossier de recherche. Également, nous allons inclure 
 le paramètre \texttt{-type f} qui signifie que nous ne voulons que afficher les fichiers et non les dossiers. Enfin, le paramètre \texttt{-name ".*"} afin de ne pas 
 inclure les fichiers masqués (ce paramètre n'est pas vraiment obligatoire mais il permet de rendre le programme plus robuste). Nous avons également veillé à 
 informer l'utilisateur s'il manque un paramètre dans son appel au script. 
 
 \section{Scipt bash \texttt{launcher}}
-Finalement, nous devions créer une script qui permette de lancer notre programme. Nous avions donc deux modes à gérer, comme il est décrit dans l'énoncé. 
+Finalement, nous devions créer un script qui permette de lancer notre programme. Nous avions donc deux modes à gérer, comme il est décrit dans l'énoncé. 
 
 Premièrement, nous avons du modifier la variable \texttt{PATH}. Pour ce faire, nous devons comprendre comment fonctionne cette variable. Cette variable contient des 
 adresses de fichiers contenant des programmes qui sont séparés par des :. Si nous voulons ajouter notre programme, il nous suffit d'ajouter notre chemin à cette 
