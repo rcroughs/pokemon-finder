@@ -106,7 +106,7 @@ Finalement, nous devions créer un script qui permette de lancer notre programme
 
 Premièrement, nous avons du modifier la variable \texttt{PATH}. Pour ce faire, nous devons comprendre comment fonctionne cette variable. Cette variable contient des 
 adresses de fichiers contenant des programmes qui sont séparés par des :. Si nous voulons ajouter notre programme, il nous suffit d'ajouter notre chemin à cette 
-variable, nous avons alors la commande \texttt{PATH="$PATH:$PWD/img-dist/"}. Nous incluons \texttt{PWD} car nous voulons le chemin absolu de notre pogramme. 
+variable, nous avons alors la commande \texttt{PATH="\$PATH:\$PWD/img-dist/"}. Nous incluons \texttt{PWD} car nous voulons le chemin absolu de notre pogramme. 
 
 Pour gérer le mode interactif, c'est le plus simple, car nous appelons juste notre programme avec le fichier à rechercher en argument, et nous laissons l'utilisateur 
 rentrer les chemins qu'il souhaite dans l'entrée standard. D'ailleurs, le calcul se fera dès qu'il passe une ligne, ce qui signifie que dès qu'il fera Ctrl+D, 
