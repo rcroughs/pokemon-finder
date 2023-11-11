@@ -135,12 +135,11 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
     if (image_count % 2 == 0) {
       // Images avec ID pair sont traitées par Fils1
       write(pere_vers_f1[WRITE], new_path.c_str(), new_path.size() + 1);
-      kill(getpid(), SIGSTOP);
     } else {
       // Images avec ID impair sont traitées par Fils2
       write(pere_vers_f2[WRITE], new_path.c_str(), new_path.size() + 1);
-      kill(getpid(), SIGSTOP);
     }
+    kill(getpid(), SIGSTOP);
     image_count++;
   }
 
