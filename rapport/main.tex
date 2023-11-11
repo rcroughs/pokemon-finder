@@ -77,6 +77,23 @@ de taille 2, et deux tableaux de caractère. Le tableau d'entier contiendra la d
 correspondant à cette valeur. Une fois que toutes les recherches sont terminées, le processus père va comparer les deux éléments de la liste d'entiers, et le plus petite 
 valeur sera le resultat de retour. La valeur par défaut de cette liste d'entier est -10, ce qui permet de savoir si aucune image n'a été entrée.  
 
+\subsection{Gestion des signaux}
+Enfin, pour bien coordonner nos processus, nous devions avoir une gestion habile des signaux. 
+
+En ce qui concerne la gestion des signaux du fils, nous masquons les signaux qui peuvent bloquer son exécution afin de ne pas bloquer le calcul de la distance entre 
+deux images. Nous allons alors uniquement traiter le signal \texttt{SIGUSR1} qui sera masqué pendant l'execution de \texttt{img-dist} et qui sera géré a la fin 
+du calcul. Cela permet de gérer nous même les signaux et de ne pas avoir de arrêts avec des \texttt{SIGINT} qui pourraient survenir a des moments imprévus. 
+
+En ce qui concerne le processus père, il va devoir gérer ses propres signaux et envoyer des signaux a ses enfants si besoin. Si il recoit une \texttt{SIGINT}, 
+il va envoyer une signal \texttt{SIGUSR1} à ses enfants comme mentionné dans le paragraphe ci-dessus, et puis terminer sa propre execution. Il va avoir le même 
+mecanisme s'il reçoit un signal \texttt{SIGPIPE} car, comme décrit dans les consignes, nous voulons que notre programme se termine si ce genre de signal 
+se produit.
+
+Enfin, nous utilisons les signaux pour savoir quand nous pouvons écrire dans les pipes. Une fois que le processus père a écrit dans les deux pipes, 
+reliés a ses deux enfants, il se met en pause. Quand un enfant a libéré son pipe, il envoie un signal \texttt{SIGCONT} à son père afin que ce dernier se débloque 
+et écrive l'adresse suivante dans le pipe. Cette pause se fait grace à la fonction standard \texttt{pause()} qui se met en pause un fil d'exécution et qui 
+reprend cet exécution quand une signal est traité par un handler.
+
 \section{Script bash \texttt{list-file}}
 Le fonctionnement de ce programme est assez simple car il repose sur une fonction déjà existante en bash, le programme \texttt{find}. Nous allons lui ajouter les paramètres 
 \texttt{-maxdepth 1} afin qu'on ne cherche pas les images dans les sous-dossiers qui peuvent se trouver dans le dossier de recherche. Également, nous allons inclure 
