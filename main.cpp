@@ -11,14 +11,18 @@
 #define WRITE 1
 
 
-void handler_singint_father(int n) {
-  kill(0, SIGUSR1);
-  exit(1);
+void handler_singint_father(int signum) {
+  if (signum == SIGPIPE || signum == SIGINT) {
+    kill(0, SIGUSR1);
+    exit(1);
+  }
 }
 
 
-void handler_sigusr1_child(int n) {
-  exit(1);
+void handler_sigusr1_child(int sigint) {
+  if (sigint == SIGUSR1) {
+    exit(1);
+  }
 }
 
 
@@ -35,6 +39,10 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* di
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
     perror("signal() ; Erreur lors du masquage de SIGINT");
+  }
+
+  if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+    perror("signal() ; Erreur lors du masquage de SIGPIPE");
   }
 
   // définition du handler pour SIGUSR1
@@ -109,6 +117,7 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
 
   // Définition du handler pour SIGINT
   signal(SIGINT, handler_singint_father);
+  signal(SIGPIPE, handler_singint_father);
 
   close(pere_vers_f1[READ]);
   close(pere_vers_f2[READ]);
