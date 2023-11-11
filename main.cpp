@@ -50,6 +50,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* di
     perror("signal() ; Erreur lors du traitement du code de l'action (SUGINT)");
   }
 
+
   // Ajout de SIGUSR1 au set de masquage
   sigset_t set;
   sigemptyset(&set);
@@ -64,7 +65,6 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* di
 
   // On attend que le père envoie une image à comparer dans le pipe. ヽ(ー_ー )ノ
   while (read(pere_vers_fils[READ], buffer, sizeof(buffer))) {
-
     kill(getppid(), SIGCONT);
     std::string current_img_path(buffer);
 
@@ -118,9 +118,7 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   // Définition du handler pour SIGINT
   signal(SIGINT, handler_singint_father);
   signal(SIGPIPE, handler_singint_father);
-
-  close(pere_vers_f1[READ]);
-  close(pere_vers_f2[READ]);
+  signal(SIGCONT, handler_singint_father);
 
   char buffer[999];  // Buffer de taille 999 chars.
   int image_count = 0;
@@ -139,7 +137,9 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
       // Images avec ID impair sont traitées par Fils2
       write(pere_vers_f2[WRITE], new_path.c_str(), new_path.size() + 1);
     }
-    kill(getpid(), SIGSTOP);
+    if (image_count > 0) {
+      pause();
+    }
     image_count++;
   }
 
