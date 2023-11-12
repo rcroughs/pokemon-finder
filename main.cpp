@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <unistd.h>
 #include <sys/types.h>
@@ -46,7 +47,7 @@ void execution_enfant(char* image_to_find, int pere_vers_fils[2], int* distance_
 
   // définition du handler pour SIGUSR1
   if (signal(SIGUSR1, handler_sigusr1_child) == SIG_ERR) {
-    perror("signal() ; Erreur lors du traitement du code de l'action (SUGINT)");
+    perror("signal() ; Erreur lors du traitement du code de l'action (SIGUSR1)");
   }
 
 
@@ -64,7 +65,9 @@ void execution_enfant(char* image_to_find, int pere_vers_fils[2], int* distance_
 
   // On attend que le père envoie une image à comparer dans le pipe. ヽ(ー_ー )ノ
   while (read(pere_vers_fils[READ], buffer, sizeof(buffer))) {
-    kill(getppid(), SIGCONT);
+    if (kill(getppid(), SIGCONT) == -1) {
+      perror("kill(); couldn't send SIGCONT signal");
+    }
 
     // Bloquage du signal SIGUSR1 pendant la durée des calculs
     if (sigprocmask(SIG_BLOCK, &set, nullptr) == -1) {
@@ -85,6 +88,8 @@ void execution_enfant(char* image_to_find, int pere_vers_fils[2], int* distance_
         ret_value = WEXITSTATUS(return_status);
       } else {
         ret_value = -3;} // Processus s'est mal terminé
+    } else {
+      perror("fork(); Couldn't create img-dist process");
     }
 
     if (ret_value > 65 or ret_value < 0) {
@@ -110,9 +115,13 @@ void execution_enfant(char* image_to_find, int pere_vers_fils[2], int* distance_
 void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_tab, char *path_tab1, char* path_tab2) {
 
   // Définition du handler pour SIGINT
-  signal(SIGINT, handler_singint_father);
-  signal(SIGPIPE, handler_singint_father);
-  signal(SIGCONT, handler_singint_father);
+  if (signal(SIGINT, handler_singint_father) == SIG_ERR ||
+      signal(SIGPIPE, handler_singint_father) == SIG_ERR ||
+      signal(SIGCONT, handler_singint_father) == SIG_ERR) 
+  {
+    perror("signal(); could't create a signal handler");
+    exit(1);
+  }
 
   char buffer[999];  // Buffer de taille 999 chars.
   int image_count = 0;
@@ -139,8 +148,11 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   }
 
   // Fermeture des extremités des deux pipes
-  close(pere_vers_f1[WRITE]);
-  close(pere_vers_f2[WRITE]);
+  if (close(pere_vers_f1[WRITE]) == -1 ||
+      close(pere_vers_f2[WRITE]) == -1)
+  {
+    perror("close(); couldn't close one of the pipes");
+  }
   // Attente de la terminaison des processus fils, permet de les effacer du PCB
   wait(NULL);
   wait(NULL);
@@ -153,8 +165,24 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
     int closest_distance;
     char* closest_path;
 
-    if (distance_tab[0] < distance_tab[1] || distance_tab[0] == distance_tab[1]) {closest_distance = distance_tab[0]; closest_path = path_tab1;}
-    else if (distance_tab[0] > distance_tab[1]) {closest_distance = distance_tab[1]; closest_path = path_tab2;}
+    // Si un des élément est égal a -10
+    if (distance_tab[0] == -10) {
+      closest_distance = distance_tab[1];
+      closest_path = path_tab2;
+    } else if (distance_tab[1] == -10) {
+      closest_distance = distance_tab[0];
+      closest_path = path_tab1;
+    }
+
+    // Dans le cas où les deux registes contiennent des distances calculées
+    else if (distance_tab[0] < distance_tab[1] || distance_tab[0] == distance_tab[1]) {
+      closest_distance = distance_tab[0];
+      closest_path = path_tab1;
+    }
+    else if (distance_tab[0] > distance_tab[1]) {
+      closest_distance = distance_tab[1]; 
+      closest_path = path_tab2;
+    }
     std::cout << "Most similar image found: '" << closest_path << "' with a distance of " << closest_distance << "." << std::endl;
   }
   // On libère l'espace de mémoire partagée
