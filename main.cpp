@@ -1,4 +1,3 @@
-#include <string>
 #include <iostream>
 #include <unistd.h>
 #include <sys/types.h>
@@ -34,7 +33,7 @@ void *create_shared_memory(size_t size) {
 }
 
 
-void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* distance_tab, char* path_tab) {
+void execution_enfant(char* image_to_find, int pere_vers_fils[2], int* distance_tab, char* path_tab) {
 
   // Masquage de SIGINT
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
@@ -66,22 +65,17 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* di
   // On attend que le père envoie une image à comparer dans le pipe. ヽ(ー_ー )ノ
   while (read(pere_vers_fils[READ], buffer, sizeof(buffer))) {
     kill(getppid(), SIGCONT);
-    std::string current_img_path(buffer);
 
     // Bloquage du signal SIGUSR1 pendant la durée des calculs
     if (sigprocmask(SIG_BLOCK, &set, nullptr) == -1) {
       perror("sigprocmask() ; Erreur lors du bloquage de SIGUSR1");
     }
 
-    // Conversion en pointeurs vers const char --> arguments de execlp
-    const char *arg1 = image_to_find.c_str();
-    const char *arg2 = current_img_path.c_str();
-
     // Création d'un fils pour execlp
     pid_t pid = fork();
     if (pid == 0) {
       // Processus fils
-      if (execlp("img-dist", "img-dist", arg1, arg2, nullptr) < 0) {
+      if (execlp("img-dist", "img-dist", image_to_find, buffer, nullptr) < 0) {
         ret_value = -2; // img-dist n'a pu s'exécuter
       }
     } else if (pid > 0) {
@@ -103,7 +97,7 @@ void execution_enfant(std::string &image_to_find, int pere_vers_fils[2], int* di
 
       if (ret_value < *distance_tab || *distance_tab == -10) {
         *distance_tab = ret_value;
-        strncpy(path_tab, arg2, 999);
+        strncpy(path_tab, buffer, 999);
       }
       // comparer la meilleure distance obtenue
     }
@@ -124,18 +118,19 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
   int image_count = 0;
 
   while (fgets(buffer, sizeof(buffer), stdin)) {
+    int buffer_size = 0;
+    while (buffer[buffer_size] != '\n') {
+      buffer_size++;
+    }
+    buffer[buffer_size] = '\0';
 
-    std::string new_path(buffer); // new_path contient le chemin vers la prochaine image à comparer.
-
-    size_t found = new_path.find('\n'); // on trouve l'indice où se situe '\n' dans new_path
-    new_path[found] = '\0'; // on le remplace par un caractère nul
 
     if (image_count % 2 == 0) {
       // Images avec ID pair sont traitées par Fils1
-      write(pere_vers_f1[WRITE], new_path.c_str(), new_path.size() + 1);
+      write(pere_vers_f1[WRITE], buffer, buffer_size + 1);
     } else {
       // Images avec ID impair sont traitées par Fils2
-      write(pere_vers_f2[WRITE], new_path.c_str(), new_path.size() + 1);
+      write(pere_vers_f2[WRITE], buffer, buffer_size + 1);
     }
     if (image_count > 0) {
       pause();
@@ -177,7 +172,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  std::string image_to_find = argv[1];  // PATH vers l'image de référence.
+  char* image_to_find = argv[1];  // PATH vers l'image de référence.
 
   // Initialisation des pipes de communication du père vers ses fils. 
   // Pipe unidirectionnels. 〜(￣▽￣〜)
@@ -217,8 +212,7 @@ int main(int argc, char *argv[]) {
     pid_t second_child = fork ();
 
     if (second_child == 0) {
-      close(pere_vers_fils1[WRITE]); // fermeture de l'écriture
-      close(pere_vers_fils2[WRITE]);
+      close(pere_vers_fils1[WRITE]); close(pere_vers_fils2[WRITE]); // Fermeture des pipes d'écriture
       execution_enfant(image_to_find, pere_vers_fils2, &shared_memory_distance[1], shared_memory_path2);
       // On lance l'exécution enfant avec les pipes respectifs au sub-Processus Fils n°2.
     } else if (second_child > 0) {
