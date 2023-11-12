@@ -108,9 +108,10 @@ Premièrement, nous avons du modifier la variable \texttt{PATH}. Pour ce faire, 
 adresses de fichiers contenant des programmes qui sont séparés par des :. Si nous voulons ajouter notre programme, il nous suffit d'ajouter notre chemin à cette 
 variable, nous avons alors la commande \texttt{PATH="\$PATH:\$PWD/img-dist/"}. Nous incluons \texttt{PWD} car nous voulons le chemin absolu de notre pogramme. 
 
-Pour gérer le mode interactif, c'est le plus simple, car nous appelons juste notre programme avec le fichier à rechercher en argument, et nous laissons l'utilisateur 
-rentrer les chemins qu'il souhaite dans l'entrée standard. D'ailleurs, le calcul se fera dès qu'il passe une ligne, ce qui signifie que dès qu'il fera Ctrl+D, 
-il aura le resultat. 
+Pour gérer le mode interactif, nous devions écouter le \texttt{stdin}, ajouter le préfix qui a été entré, et puis le rediriger vers notre programme \texttt{img-search}. 
+L'écoute de l'entrée peut se faire grace a la fonction read de bash, qui mis dans un boucle while nous permet d'écouter jusqu'à ce que l'utilisateur fasse un Ctrl+D. 
+Nous pouvons alors \texttt{echo} l'entrée standard, et l'envoyer dans un pipe à notre programme. Nous devons veiller à ce qu'il y ait bien un seul et unique 
+passage à la ligne (notamment a la fin car echo génère un passage a la ligne).
 
 En ce concerne le mode automatique, nous allons utiliser notre script \texttt{list-file} et rediriger la sortie de ce script vers l'entrée 
 de notre programme \texttt{img-search}, avec l'opérateur \texttt{|}. 

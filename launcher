@@ -2,13 +2,26 @@
 
 
 PATH="$PATH:$PWD/img-dist/"
-target_directory="${3:-./img/}" # valeur par défaut, mais ne marche pas
-
 
 if [[ $1 = "-i" || $1 = "--interactive" ]]
 then
-  # Mode interactif (il faut encore rajouter le préfixe)
-  ./img-search $2
+  # Mode interactif
+  user_input=""
+  image_count=0
+  prefix=$3
+  while IFS= read -r line;
+  do 
+    if [[ "$line" != "" ]] 
+    then
+      user_input="${user_input}${prefix}${line}\n"
+      image_count+=1
+    fi
+  done
+  if [[ image_count -gt 0 ]] 
+  then
+    user_input=${user_input::-2}
+  fi
+  echo -e $user_input | ./img-search $2
 elif [[ $1 = "-a" || $1 = "--automatic" ]]
 then
   # Mode automatique
