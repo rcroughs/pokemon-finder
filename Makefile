@@ -1,5 +1,5 @@
 CC=g++
-OPT=-Wall -Wextra -O2
+OPT=-Wall -Wextra -O2 -std=c++17  -Wpedantic
 OBJS=
 
 all: img-search
