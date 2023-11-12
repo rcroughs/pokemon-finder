@@ -2,6 +2,7 @@
 
 
 PATH="$PATH:$PWD/img-dist/"
+chmod +x ./list-file
 
 if [[ $1 = "-i" || $1 = "--interactive" ]]
 then
