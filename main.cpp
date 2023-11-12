@@ -133,16 +133,17 @@ void execution_parent(int pere_vers_f1[2], int pere_vers_f2[2], int* distance_ta
     }
     buffer[buffer_size] = '\0';
 
-
-    if (image_count % 2 == 0) {
-      // Images avec ID pair sont traitées par Fils1
-      write(pere_vers_f1[WRITE], buffer, buffer_size + 1);
-    } else {
-      // Images avec ID impair sont traitées par Fils2
-      write(pere_vers_f2[WRITE], buffer, buffer_size + 1);
-    }
-    if (image_count > 0) {
-      pause();
+    if (buffer_size > 0) {
+      if (image_count % 2 == 0) {
+        // Images avec ID pair sont traitées par Fils1
+        write(pere_vers_f1[WRITE], buffer, buffer_size + 1);
+      } else {
+        // Images avec ID impair sont traitées par Fils2
+        write(pere_vers_f2[WRITE], buffer, buffer_size + 1);
+      }
+      if (image_count > 0) {
+        pause();
+      }
     }
     image_count++;
   }
