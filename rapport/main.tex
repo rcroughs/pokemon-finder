@@ -58,8 +58,8 @@ Cependant, lors de l'écriture dans les pipes, nous avons fait face à la probl�
 contraire, récupérer les images dans l'entrée standard ne l'est pas. Cela ne pose pas de problèmes quand nous utilisons une entrée standard qui est reliée au clavier 
 de l'utilisateur, mais quand nous faisons un pipe entre nos processus (avec l'opérateur \texttt{|} en bash) le processus père écrit plus vite 
 que le processus enfant ne peut le lire. Pour remédier à cela, nous avons opté pour une solution en signaux. Lorsque le père a écrit dans les deux pipes, au début 
-de son exécution, il se met en pause avec un signal \texttt{SIGSTOP} qu'il s'envoie à lui même. Une fois qu'un des processus fils a fini son calcul il débloque 
-l'exécution du père avec le signal \texttt{SIGCONT}. Cela permet aux pipes de ne jamais être surchargés. 
+de son exécution, il se met en pause avec la fonction \texttt{pause()}, ce qui aura comme effet d'arrêter son execution jusqu'à ce qu'il réceptionne un signal. 
+Une fois qu'un des processus fils a fini son calcul il débloque le père avec le signal \texttt{SIGCONT}. Cela permet aux pipes de ne jamais être surchargés. 
 
 \subsection{Fonctionnement des processus enfants}
 Le processus enfant va tout d'abord lire ce qu'il y a dans son pipe. Vu que le read est bloquant, nous n'avons qu'à attendre que le père écrive quelque chose pour 
@@ -89,10 +89,7 @@ il va envoyer une signal \texttt{SIGUSR1} à ses enfants comme mentionné dans l
 mecanisme s'il reçoit un signal \texttt{SIGPIPE} car, comme décrit dans les consignes, nous voulons que notre programme se termine si ce genre de signal 
 se produit.
 
-Enfin, nous utilisons les signaux pour savoir quand nous pouvons écrire dans les pipes. Une fois que le processus père a écrit dans les deux pipes, 
-reliés a ses deux enfants, il se met en pause. Quand un enfant a libéré son pipe, il envoie un signal \texttt{SIGCONT} à son père afin que ce dernier se débloque 
-et écrive l'adresse suivante dans le pipe. Cette pause se fait grace à la fonction standard \texttt{pause()} qui se met en pause un fil d'exécution et qui 
-reprend cet exécution quand une signal est traité par un handler.
+Nous utilisons également les signaux pour le gérer les flux dans les pipes, comme décrit plus haut.
 
 \section{Script bash \texttt{list-file}}
 Le fonctionnement de ce programme est assez simple car il repose sur une fonction déjà existante en bash, le programme \texttt{find}. Nous allons lui ajouter les paramètres 
